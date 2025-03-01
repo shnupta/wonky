@@ -1,2 +1,2 @@
 # wonky
-A tui library in C++
+C++ TUI framework.
