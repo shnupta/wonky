@@ -1,43 +1,28 @@
 #include "wonky/app.h"
+#include "wonky/terminal.h"
+#include "wonky/screen.h"
 
 #include "terminal_input.h"
 
+#include <hulaloop/repeater.h>
+
+#include <memory>
 #include <stdexcept>
 
 namespace wonky {
 
-// so how do i want this library to look?
-//
-// bare in mind the client application event loop will receive data and we want to pipe it into the terminal display
-//
-// Maybe let's split the drawing up into a screen and a then widgets.
-// I think a nice abstraction is then a 'view', which is basically a bounded section of the screen.
-// So views can contain a set of widgets or other views. Or is this just unnecessary?
-// Widget is just the same I guess.
-// We then build a tree of widgets and have them draw into the screen on a timer.
-//
-// screens:
-// wonky::screen::full_screen()
-//
-// widgets:
-// wonky::container_view()
-//   - holds all the panes and sub children, draws top left -> bottom right
-//   - automatically resizes children if they are flexible (not fixed)
-// wonky::terminal_view()
-//   - interprets terminal escape sequences
-//
-// and then each widget is given a bounded section of the screen into which it draws.
-// non-visible widgets simply don't draw. 
-// if widgets overlap the last drawn will be visible on top.
-
 class app::impl {
 public:
 	explicit impl()
-		: _termin(_loop)
+		: _render_repeater(_loop, 30ms, [this] { render(); })
+		, _terminput(_loop)
+		, _terminal(terminal::get())
 	{
+		_winsize_closer = _loop.connect_to_unix_signal(hula::unix::sig::sigwinch, [&] { _terminal.update_winsize(); });
 	}
 
 	void run() {
+		_render_repeater.start();
 		_loop.run();
 	}
 
@@ -49,9 +34,24 @@ public:
 		return _loop;
 	}
 
+	void set_screen(std::shared_ptr<screen> s) {
+		_screen = s;
+	}
+
 private:
+
+	void render() {
+		_screen->render();
+	}
+
 	hula::loop<> _loop;
-	terminal_input _termin;
+	hula::repeater<> _render_repeater;
+	terminal_input _terminput;
+	terminal& _terminal;
+	std::shared_ptr<screen> _screen;
+
+	// handles
+	hula::closer _winsize_closer;
 };
 
 
@@ -74,6 +74,10 @@ void app::stop() {
 
 hula::loop<>& app::runtime() {
 	return _pimpl->runtime();
+}
+
+void app::set_screen(std::shared_ptr<screen> s) {
+	_pimpl->set_screen(s);
 }
 
 }

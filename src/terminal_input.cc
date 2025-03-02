@@ -1,5 +1,6 @@
 #include "terminal_input.h"
 
+#include <iostream>
 #include <unistd.h>
 
 namespace wonky {
@@ -20,7 +21,7 @@ terminal_input::terminal_input(hula::loop<>& l)
 }
 
 void terminal_input::stdin_readable() {
-	printf("term input!\n");
+	printf("terminal input!\n");
 	char buf[128];
 	::read(STDERR_FILENO, buf, sizeof(buf));
 
