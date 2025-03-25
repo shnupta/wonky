@@ -1,37 +1,53 @@
 #pragma once
 
+#include "esc.h"
+
+#include <stdexcept>
+#include <string>
+
 #include <sys/termios.h>
-#include <sys/ttycom.h>
+#include <unistd.h>
 
 namespace wonky {
 
 class terminal {
-public:
+ public:
+  void enable_raw_mode() {
+    save_buffer();
 
-	static terminal& get();
+    if (tcgetattr(STDIN_FILENO, &_original_termios) != 0) {
+      throw std::runtime_error("failed to get original termios settings");
+    }
 
-	bool in_raw_mode() const;
-	void enable_raw_mode();
-	void disable_raw_mode();
+    struct termios raw = _original_termios;
+    raw.c_lflag &= ~(ECHO | ICANON);
 
-	void flush();
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) != 0) {
+      throw std::runtime_error("failed to set raw mode termios settings");
+    }
+  }
 
-	void update_winsize();
+  void erase_full_screen() { write(esc::erase_screen); }
 
-	// cursor movement
-	void cursor_home();
+  void disable_raw_mode() {
+    restore_buffer();
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &_original_termios)) {
+      throw std::runtime_error("failed to restore original termios settings");
+    }
+  }
 
-	// screen operations
-	void screen_clear();
+ private:
+  void save_buffer() { write(esc::enable_asb); }
 
-private:
-	explicit terminal();
-	void escape(const char* value);
-	void csi(const char* value);
+  void restore_buffer() { write(esc::disable_asb); }
 
-	struct termios _termios;
-	struct winsize _winsize;
-	bool _in_raw_mode = false;
+  void write(const std::string& s) { write(s.data(), s.size()); }
+
+  void write(const char* s) { write(s, std::strlen(s)); }
+
+  void write(const char* data, size_t sz) { ::write(STDOUT_FILENO, data, sz); }
+
+  struct termios _original_termios;
 };
 
-}
+}  // namespace wonky

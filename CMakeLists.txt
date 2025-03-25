@@ -21,12 +21,9 @@ FetchContent_MakeAvailable(hulaloop)
 set(WONKY_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 include_directories(${WONKY_INCLUDE_DIR})
 
-set(WONKY_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
-file(GLOB_RECURSE WONKY_SOURCES ${WONKY_SOURCE_DIR}/*.cc)
-
-add_library(wonky STATIC ${WONKY_SOURCES})
+add_library(wonky INTERFACE)
 add_library(wonky::wonky ALIAS wonky)
-target_link_libraries(wonky hulaloop::hulaloop)
+target_link_libraries(wonky INTERFACE hulaloop::hulaloop)
 
 set(_wonky_is_toplevel_project FALSE)
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
@@ -42,6 +39,8 @@ target_include_directories(
 target_compile_definitions(wonky INTERFACE "")
 
 if (_wonky_is_toplevel_project)
+	# message("wonky => building tests")
+	# add_subdirectory(tests)
 	message("wonky => building demos")
 	add_subdirectory(demos)
 endif()

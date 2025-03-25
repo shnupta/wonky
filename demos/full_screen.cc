@@ -1,25 +1,18 @@
-#include "wonky/full_screen.h"
 #include <memory>
+
 #include <wonky/app.h>
+#include <wonky/screen.h>
+#include <wonky/terminal.h>
 
 int main(int argc, char** argv) {
-	auto main_screen = std::make_shared<wonky::full_screen>();
-	// auto main_screen = std::make_shared<wonky::screen>();
-	wonky::app app;
-	app.set_screen(main_screen);
+  wonky::app a;
 
-	// todo: something like this?
-	// main_screen->compose(wonky::container({
-	// 		wonky::textbox() | wonky::border::rounded | wonky::flex,
-	// 		wonky::button()
-	// }));
+  // a.set_root(main_widget);
 
-	// todo: construct a full screen view
-	// todo: build a widget tree that renders to the view
+  //
+  a.mutable_loop()->post(5s, [&] { a.stop(); });
+  //
 
-	// todo: set this view as the root view of the app
-	// app.set_root_view();
-
-	app.run();
-	return 0;
+  a.run();
+  return 0;
 }

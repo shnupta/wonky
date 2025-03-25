@@ -1,29 +1,71 @@
 #pragma once
 
+#include "cell.h"
+#include "sizing.h"
 #include "terminal.h"
 
-#include <ostream>
 #include <vector>
 
 namespace wonky {
 
-class screen
-{
-public:
-	explicit screen();
-	virtual ~screen() = default;
+class back_buffer {
+ public:
+  explicit back_buffer() = default;
 
-	// by default just redraws whatever is in it's buffer to the output.
-	virtual void render();
+  explicit back_buffer(size s) { resize(s); }
 
-protected:
-	// actual output (e.g. a terminal)
-	terminal& _term;
+  void resize(size s) {
+    _size = s;
+    _cells.resize(s.height, std::vector<cell>(s.width));
+  }
 
-	using storage_t = char;
-	using row = std::vector<storage_t>;
-	// widgets draw into this buffer
-	std::vector<row> _buffer;
+  cell& mutable_cell(coord c) { return _cells.at(c.y).at(c.x); }
+
+  const cell& get_cell(coord c) const { return _cells.at(c.y).at(c.x); }
+
+  void clear() {
+    _cells.clear();
+    resize(_size);
+  }
+
+ private:
+  size _size{};
+  std::vector<std::vector<cell>> _cells{};
 };
 
-}
+class screen {
+ public:
+  enum class display_mode {
+    inplace,  // todo
+    full_screen
+  };
+
+  struct options {
+    display_mode display{display_mode::full_screen};
+  };
+
+  explicit screen(terminal& term) : _terminal(term) {}
+  explicit screen(terminal& term, options opts)
+      : _terminal(term), _options(opts) {}
+
+  void initialise() {
+    _terminal.enable_raw_mode();
+
+    switch (_options.display) {
+      case display_mode::full_screen:
+        _terminal.erase_full_screen();
+        break;
+      default:
+        break;
+    }
+  }
+
+  void deinitialise() { _terminal.disable_raw_mode(); }
+
+ private:
+  terminal& _terminal;
+  options _options{};
+  back_buffer _buf;
+};
+
+}  // namespace wonky
